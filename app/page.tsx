@@ -1,5 +1,5 @@
-import DashboardPage from "@/components/pages/dashboard-page"
+import DashboardClientWrapper from '@/components/wrappers/dashboard-client-wrapper'
 
 export default function Home() {
-  return <DashboardPage />
+  return <DashboardClientWrapper />
 }
