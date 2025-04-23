@@ -1,277 +1,294 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { z } from "zod";
+import { Task, TaskSchema } from "@/types/task";
+import { Id } from "@/convex/_generated/dataModel";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 
-import { useState } from "react"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon } from "lucide-react"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import type { Task } from "@/components/pages/tasks-page"
+type TaskFormValues = z.infer<typeof TaskSchema>;
 
 interface TaskSheetProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSubmit: (task: Omit<Task, "id" | "createdAt">) => void
+  onOpenChange: (open: boolean) => void;
+  onFormSubmit: (data: TaskFormValues) => void;
+  open: boolean;
+  initialData?: Partial<TaskFormValues>;
 }
 
-export function TaskSheet({ open, onOpenChange, onSubmit }: TaskSheetProps) {
-  const [formData, setFormData] = useState<Omit<Task, "id" | "createdAt">>({
-    title: "",
-    description: "",
-    status: "pending",
-    priority: "medium",
-    dueDate: format(new Date(), "yyyy-MM-dd"),
-    assignee: "",
-    category: "",
-  })
-  const [date, setDate] = useState<Date | undefined>(new Date())
-  const [currentStep, setCurrentStep] = useState(1)
-  const totalSteps = 3
+export function TaskSheet({ open, onOpenChange, onFormSubmit, initialData }: TaskSheetProps) {
+  const form = useForm<TaskFormValues>({
+    resolver: zodResolver(TaskSchema),
+    defaultValues: {
+      title: initialData?.title || "",
+      description: initialData?.description || "",
+      status: initialData?.status || "pending",
+      priority: initialData?.priority || "medium",
+      dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
+      taskType: initialData?.taskType || "administrative",
+      location: initialData?.location || "",
+    },
+  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  const { handleSubmit, control, formState: { isSubmitting }, reset } = form;
 
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+  const onSubmitHandler: SubmitHandler<TaskFormValues> = (data) => {
+    onFormSubmit(data);
+  };
 
-  const handleDateChange = (date: Date | undefined) => {
-    if (date) {
-      setDate(date)
-      setFormData((prev) => ({ ...prev, dueDate: format(date, "yyyy-MM-dd") }))
+  useEffect(() => {
+    if (initialData) {
+      reset({
+        ...initialData,
+        dueDate: initialData.dueDate ? new Date(initialData.dueDate) : undefined,
+      });
+    } else {
+      reset({
+        title: "",
+        description: "",
+        status: "pending",
+        priority: "medium",
+        dueDate: undefined,
+        taskType: "administrative",
+        location: "",
+      });
     }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit(formData)
-
-    // Reset form
-    setFormData({
-      title: "",
-      description: "",
-      status: "pending",
-      priority: "medium",
-      dueDate: format(new Date(), "yyyy-MM-dd"),
-      assignee: "",
-      category: "",
-    })
-    setCurrentStep(1)
-  }
-
-  const nextStep = () => {
-    setCurrentStep((prev) => Math.min(prev + 1, totalSteps))
-  }
-
-  const prevStep = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1))
-  }
-
-  const isStepValid = () => {
-    if (currentStep === 1) {
-      return formData.title.trim() !== "" && formData.description.trim() !== ""
-    }
-    if (currentStep === 2) {
-      return formData.status !== "" && formData.priority !== "" && formData.dueDate !== ""
-    }
-    if (currentStep === 3) {
-      return formData.assignee.trim() !== "" && formData.category.trim() !== ""
-    }
-    return true
-  }
+  }, [initialData, reset]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle className="text-white">Create New Task</SheetTitle>
+      <SheetContent className="sm:max-w-2xl w-full p-0 bg-gray-900 text-gray-100 overflow-auto">
+        <SheetHeader className="p-6 border-b border-gray-700 bg-gray-900 sticky top-0 z-10">
+          <SheetTitle className="text-xl font-semibold text-white">
+            {initialData ? "Edit Task" : "Create New Task"}
+          </SheetTitle>
           <SheetDescription className="text-gray-400">
-            Step {currentStep} of {totalSteps}:{" "}
-            {currentStep === 1 ? "Basic Information" : currentStep === 2 ? "Task Details" : "Assignment"}
+            {initialData ? "Update the details of the existing task." : "Fill in the details to create a new task."}
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 py-6 relative z-10">
-          {currentStep === 1 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Task Title</Label>
-                <Input
-                  id="title"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  placeholder="Enter task title"
-                  className="bg-gray-700 border-gray-600"
-                  required
-                />
-              </div>
+        <Form {...form}>
+          <form onSubmit={handleSubmit(onSubmitHandler)} className="flex flex-col">
+            <div className="p-6 space-y-6">
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="pt-6 space-y-4">
+                  <FormField
+                    control={control}
+                    name="title"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-200">Title</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., Prepare monthly report"
+                            {...field}
+                            className="bg-gray-700 border-gray-600 text-white focus:border-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-400" />
+                      </FormItem>
+                    )}
+                  />
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Enter task description"
-                  className="bg-gray-700 border-gray-600 min-h-[100px]"
-                  required
-                />
-              </div>
-            </div>
-          )}
+                  <FormField
+                    control={control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-200">Description</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Add a detailed description..."
+                            {...field}
+                            className="bg-gray-700 border-gray-600 text-white focus:border-blue-500 min-h-24"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
 
-          {currentStep === 2 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value) => handleSelectChange("status", value)}>
-                  <SelectTrigger className="bg-gray-700 border-gray-600">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-700 border-gray-600">
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority</Label>
-                <Select value={formData.priority} onValueChange={(value) => handleSelectChange("priority", value)}>
-                  <SelectTrigger className="bg-gray-700 border-gray-600">
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-700 border-gray-600">
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Due Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal bg-gray-700 border-gray-600 hover:bg-gray-600",
-                        !date && "text-muted-foreground",
+              <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-lg text-white">Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                      control={control}
+                      name="status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-200">Status</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="z-[60] bg-gray-800 border-gray-700 text-white">
+                              <SelectItem value="pending" className="focus:bg-gray-700">Pending</SelectItem>
+                              <SelectItem value="in-progress" className="focus:bg-gray-700">In Progress</SelectItem>
+                              <SelectItem value="under-review" className="focus:bg-gray-700">Under Review</SelectItem>
+                              <SelectItem value="completed" className="focus:bg-gray-700">Completed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-red-400" />
+                        </FormItem>
                       )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {date ? format(date, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-gray-700 border-gray-600">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={handleDateChange}
-                      initialFocus
-                      className="bg-gray-700 text-white"
                     />
-                  </PopoverContent>
-                </Popover>
-              </div>
+                    <FormField
+                      control={control}
+                      name="priority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-gray-200">Priority</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                                <SelectValue placeholder="Select priority" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="z-[60] bg-gray-800 border-gray-700 text-white">
+                              <SelectItem value="low" className="focus:bg-gray-700">Low</SelectItem>
+                              <SelectItem value="medium" className="focus:bg-gray-700">Medium</SelectItem>
+                              <SelectItem value="high" className="focus:bg-gray-700">High</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage className="text-red-400" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel className="text-gray-200">Due Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={"outline"}
+                                className={cn(
+                                  "w-full justify-start text-left font-normal bg-gray-700 border-gray-600 hover:bg-gray-600",
+                                  !field.value && "text-gray-400"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
+                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0 z-[60] bg-gray-800 border-gray-700" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                              initialFocus
+                              className="bg-gray-800 text-white"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage className="text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-lg text-white">Assignment & Type</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <FormField
+                    control={control}
+                    name="taskType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-200">Task Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                              <SelectValue placeholder="Select task type" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="z-[60] bg-gray-800 border-gray-700 text-white">
+                            <SelectItem value="administrative" className="focus:bg-gray-700">Administrative</SelectItem>
+                            <SelectItem value="clinical" className="focus:bg-gray-700">Clinical</SelectItem>
+                            <SelectItem value="billing" className="focus:bg-gray-700">Billing</SelectItem>
+                            <SelectItem value="maintenance" className="focus:bg-gray-700">Maintenance</SelectItem>
+                            <SelectItem value="reporting" className="focus:bg-gray-700">Reporting</SelectItem>
+                            <SelectItem value="other" className="focus:bg-gray-700">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage className="text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-200">Location (Optional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="e.g., Ward B, Room 201"
+                            {...field}
+                            className="bg-gray-700 border-gray-600 text-white focus:border-blue-500"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-red-400" />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
             </div>
-          )}
 
-          {currentStep === 3 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="assignee">Assignee</Label>
-                <Input
-                  id="assignee"
-                  name="assignee"
-                  value={formData.assignee}
-                  onChange={handleChange}
-                  placeholder="Enter assignee name"
-                  className="bg-gray-700 border-gray-600"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  placeholder="Enter category"
-                  className="bg-gray-700 border-gray-600"
-                  required
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-between pt-4">
-            {currentStep > 1 ? (
+            <SheetFooter className="p-6 bg-gray-900 border-t border-gray-700 sticky bottom-0 z-10">
               <Button
                 type="button"
                 variant="outline"
-                onClick={prevStep}
-                className="bg-transparent border-gray-600 hover:bg-gray-800/50 hover:border-gray-500 text-gray-300"
+                onClick={() => onOpenChange(false)}
+                className="bg-transparent hover:bg-gray-700 border-gray-600 text-gray-300 hover:text-white"
               >
-                Previous
+                Cancel
               </Button>
-            ) : (
-              <div></div>
-            )}
-
-            {currentStep < totalSteps ? (
-              <Button
-                type="button"
-                onClick={nextStep}
-                disabled={!isStepValid()}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 shadow-[0_0_15px_rgba(79,70,229,0.4)] disabled:opacity-50 disabled:shadow-none disabled:from-gray-700 disabled:to-gray-700"
-              >
-                Next
-              </Button>
-            ) : (
               <Button
                 type="submit"
-                disabled={!isStepValid()}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 shadow-[0_0_15px_rgba(79,70,229,0.4)] disabled:opacity-50 disabled:shadow-none disabled:from-gray-700 disabled:to-gray-700"
+                disabled={isSubmitting}
+                className="bg-blue-600 hover:bg-blue-500 text-white"
               >
-                Create Task
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {initialData ? "Save Changes" : "Create Task"}
               </Button>
-            )}
-          </div>
-
-          <div className="flex justify-center mt-4">
-            <div className="flex space-x-2">
-              {Array.from({ length: totalSteps }).map((_, index) => (
-                <div
-                  key={index}
-                  className={`h-2 w-2 rounded-full ${
-                    currentStep > index
-                      ? "bg-gradient-to-r from-blue-500 to-purple-500 shadow-[0_0_5px_rgba(79,70,229,0.5)]"
-                      : "bg-gray-600"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </form>
+            </SheetFooter>
+          </form>
+        </Form>
       </SheetContent>
     </Sheet>
-  )
+  );
 }

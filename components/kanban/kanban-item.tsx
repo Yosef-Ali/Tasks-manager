@@ -2,6 +2,7 @@ import type { Task } from "@/components/kanban/kanban-board"
 import { Calendar, Clock, AlertCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 interface KanbanItemProps {
   task: Task
@@ -45,7 +46,35 @@ export function KanbanItem({ task }: KanbanItemProps) {
             <Calendar className="h-3 w-3 mr-1" />
             {formatDueDate(task.dueDate)}
           </div>
-          <div>{task.assignee}</div>
+          {task.assignee ? (
+            typeof task.assignee === 'object' && task.assignee !== null ? (
+              // Assignee is an object
+              <div className="flex items-center">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={(task.assignee as any).avatarUrl} />
+                  <AvatarFallback>{(task.assignee as any).name ? (task.assignee as any).name.charAt(0) : '?'}</AvatarFallback>
+                </Avatar>
+                <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                  {(task.assignee as any).name || 'Unknown Assignee'}
+                </span>
+              </div>
+            ) : typeof task.assignee === 'string' ? (
+              // Assignee is a string
+              <div className="flex items-center">
+                <Avatar className="h-6 w-6">
+                  <AvatarFallback>{task.assignee.length > 0 ? task.assignee.charAt(0) : '?'}</AvatarFallback>
+                </Avatar>
+                <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                  {task.assignee}
+                </span>
+              </div>
+            ) : (
+              // Fallback for unexpected assignee type
+              <span className="text-sm text-gray-500">Invalid Assignee Data</span>
+            )
+          ) : (
+            <span className="text-sm text-gray-500">Unassigned</span>
+          )}
         </div>
       </div>
     </div>

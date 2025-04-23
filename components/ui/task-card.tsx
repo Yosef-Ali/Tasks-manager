@@ -1,102 +1,194 @@
-import { Clock, CheckCircle, AlertCircle, MoreHorizontal } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  CalendarIcon,
+  MapPinIcon,
+  FileTextIcon,
+  MoreHorizontalIcon,
+  EyeIcon,
+  EditIcon
+} from "lucide-react";
+import { format } from "date-fns";
+import { Id } from "@/convex/_generated/dataModel";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
-interface TaskCardProps {
-  title: string
-  description: string
-  status: "pending" | "in-progress" | "completed" | "urgent" | "under-review" // Added "under-review" status
-  dueDate: string
-  assignee: string
-  category: string
-  priority?: "low" | "medium" | "high"
-  requiredDocuments?: string[] // Added requiredDocuments prop
+export interface TaskCardProps {
+  id: Id<"tasks">;
+  title: string;
+  description?: string;
+  dueDate: Date;
+  status: string;
+  taskType?: string;
+  priority?: string;
+  assignee?: {
+    id: string;
+    name: string;
+    avatarUrl?: string;
+  };
+  location?: string;
+  documentCount: number;
+  completedDocuments: number;
+  onStatusChange?: (id: Id<"tasks">, status: string) => void;
+  onEdit?: (id: Id<"tasks">) => void;
+  onViewDetails?: (id: string) => void;
+  onArchive?: (id: Id<"tasks">) => void;
+  onShare?: (id: Id<"tasks">) => void;
 }
 
 export function TaskCard({
+  id,
   title,
   description,
-  status,
   dueDate,
+  status,
+  taskType,
+  priority,
   assignee,
-  category,
-  priority = "medium",
+  location,
+  documentCount,
+  completedDocuments,
+  onStatusChange,
+  onEdit,
+  onViewDetails,
+  onArchive,
+  onShare
 }: TaskCardProps) {
-  const statusColors = {
-    pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-    "in-progress": "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    completed: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-    urgent: "bg-red-500/10 text-red-500 border-red-500/20",
-    "under-review": "bg-sky-500/10 text-sky-500 border-sky-500/20",
-  }
+  const progressValue = documentCount > 0 ? (completedDocuments / documentCount) * 100 : 0;
 
-  const statusIcons = {
-    pending: <Clock className="h-4 w-4" />,
-    "in-progress": <AlertCircle className="h-4 w-4" />,
-    completed: <CheckCircle className="h-4 w-4" />,
-    urgent: <AlertCircle className="h-4 w-4" />,
-    "under-review": <Clock className="h-4 w-4" />,
-  }
+  // Get status badge styling based on status
+  const getStatusBadgeClass = () => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+      case "in-progress":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+      case "under-review":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+      default:
+        return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
+    }
+  };
 
-  const priorityColors = {
-    low: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    medium: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-    high: "bg-red-500/10 text-red-500 border-red-500/20",
-  }
-
-  // Format the due date
-  const formatDueDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  }
+  // Format status display text
+  const formatStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ');
+  };
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden hover:border-gray-600 transition-all duration-200 flex flex-col">
-      <div className="p-5 flex-1">
-        <div className="flex justify-between items-start mb-3">
-          <Badge className={`${statusColors[status]} text-xs font-medium flex items-center gap-1`}>
-            {statusIcons[status]}
-            {status.charAt(0).toUpperCase() + status.slice(1).replace("-", " ")}
-          </Badge>
-          <Badge className={`${priorityColors[priority]} text-xs font-medium`}>
-            {priority.charAt(0).toUpperCase() + priority.slice(1)} Priority
+    <Card className="flex flex-col h-full overflow-hidden hover:shadow-md transition-shadow duration-200">
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <CardTitle className="text-xl font-semibold line-clamp-1">{title}</CardTitle>
+            {taskType && (
+              <Badge variant="outline" className="mt-2 font-normal text-gray-600 dark:text-gray-400">
+                {taskType}
+              </Badge>
+            )}
+          </div>
+          <Badge className={`${getStatusBadgeClass()} ml-2 self-start flex-shrink-0`}>
+            {formatStatus(status)}
           </Badge>
         </div>
-        <h3 className="font-medium text-lg mb-2 text-white">{title}</h3>
-        <p className="text-gray-400 text-sm mb-4 line-clamp-3">{description}</p>
-        <div className="text-xs text-gray-500 space-y-1">
-          <div className="flex justify-between">
-            <span>Due:</span>
-            <span className="text-gray-400">{formatDueDate(dueDate)}</span>
+      </CardHeader>
+
+      <CardContent className="flex flex-col h-full p-6 pt-0">
+        {description && (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
+            {description}
+          </p>
+        )}
+
+        <div className="flex flex-col flex-1 justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+              <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
+              <span>Due: {format(dueDate, "PPP")}</span>
+            </div>
+
+            {location && (
+              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                <MapPinIcon className="mr-2 h-4 w-4 text-gray-400" />
+                <span>{location}</span>
+              </div>
+            )}
+
+            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+              <FileTextIcon className="mr-2 h-4 w-4 text-gray-400" />
+              <span>Documents: {completedDocuments}/{documentCount}</span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span>Assignee:</span>
-            <span className="text-gray-400">{assignee}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Category:</span>
-            <span className="text-gray-400">{category}</span>
-          </div>
+
+          {documentCount > 0 && (
+            <div className="pt-4 mt-auto mb-4">
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                <span>Progress</span>
+                <span>{Math.round(progressValue)}%</span>
+              </div>
+              <Progress value={progressValue} className="h-2" />
+            </div>
+          )}
         </div>
-      </div>
-      <div className="px-5 py-3 border-t border-gray-700 flex justify-between items-center">
-        <button className="text-xs text-blue-400 hover:text-blue-300 font-medium">View Details</button>
-        <DropdownMenu>
-          <DropdownMenuTrigger className="text-xs text-gray-400 hover:text-gray-300 font-medium flex items-center">
-            <MoreHorizontal size={14} className="mr-1" />
-            Actions
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white">
-            <DropdownMenuItem className="hover:bg-gray-700 focus:bg-gray-700 text-sm">Edit Task</DropdownMenuItem>
-            <DropdownMenuItem className="hover:bg-gray-700 focus:bg-gray-700 text-sm">
-              Mark as Completed
-            </DropdownMenuItem>
-            <DropdownMenuItem className="hover:bg-gray-700 focus:bg-gray-700 text-sm text-red-400">
-              Delete Task
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
-  )
+
+        <div className="flex justify-between items-center mt-4 pt-2 border-t border-gray-100 dark:border-gray-800">
+          {assignee ? (
+            <div className="flex items-center">
+              <Avatar className="h-8 w-8 mr-2 ring-2 ring-background">
+                <AvatarImage src={assignee.avatarUrl} />
+                <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                  {assignee.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm text-gray-700 dark:text-gray-300">{assignee.name}</span>
+            </div>
+          ) : (
+            <span className="text-xs text-gray-500 dark:text-gray-400">No assignee</span>
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreHorizontalIcon className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {onViewDetails && (
+                <DropdownMenuItem onClick={() => onViewDetails(String(id))}>
+                  <EyeIcon className="h-4 w-4 mr-2" /> View Details
+                </DropdownMenuItem>
+              )}
+              {onEdit && (
+                <DropdownMenuItem onClick={() => onEdit(id)}>
+                  <EditIcon className="h-4 w-4 mr-2" /> Edit Task
+                </DropdownMenuItem>
+              )}
+              {onStatusChange && (
+                <DropdownMenuItem onClick={() => onStatusChange(id, status === "completed" ? "pending" : "completed")}>
+                  Mark as {status === "completed" ? "Pending" : "Completed"}
+                </DropdownMenuItem>
+              )}
+              {onShare && (
+                <DropdownMenuItem onClick={() => onShare(id)}>
+                  Share Task
+                </DropdownMenuItem>
+              )}
+              {onArchive && (
+                <DropdownMenuItem onClick={() => onArchive(id)}>
+                  Archive Task
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
