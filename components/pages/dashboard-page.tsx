@@ -80,7 +80,7 @@ function DashboardPage() {
   }
 
   return (
-    <div> {/* Removed padding class */}
+    <div className="p-6 bg-background min-h-screen">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Administrative Dashboard</h1>
         <p className="text-muted-foreground mt-1 text-sm">Track document processing and administrative tasks</p>
