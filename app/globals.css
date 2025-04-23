@@ -4,6 +4,11 @@
 
 @layer base {
   :root {
+    /* Chart colors */
+    --color-completed: hsl(217 91% 60%);
+    --color-inProgress: hsl(150 91% 60%);
+    --color-pending: hsl(0 0% 70%);
+
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
