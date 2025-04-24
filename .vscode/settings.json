@@ -1,0 +1,52 @@
+{
+    "github.copilot.enable": {
+        "*": true,
+        "markdown": true,
+        "plaintext": true,
+        "typescript": true,
+        "typescriptreact": true,
+        "javascript": true,
+        "javascriptreact": true
+    },
+    "github.copilot.advanced": {
+        "language": {
+            "typescript": {
+                "feature.jsdoc.generateJsDoc": true
+            },
+            "typescriptreact": {
+                "feature.jsdoc.generateJsDoc": true
+            }
+        }
+    },
+    "editor.inlineSuggest.enabled": true,
+    "editor.inlineSuggest.showToolbar": "always",
+    "github.copilot.chat.localeOverride": "en-US",
+    "github.copilot.inlineSuggest.enable": true,
+    "github.copilot.editor.enableAutoCompletions": true,
+    // Custom dictionary for healthcare terminology
+    "cSpell.words": [
+        "HIPAA",
+        "patients",
+        "medications",
+        "diagnoses",
+        "vitals",
+        "healthcare",
+        "medical",
+        "clinician",
+        "physician",
+        "convex",
+        "shadcn"
+    ],
+    // Comment template for sensitive data handling
+    "workbench.editorAssociations": {
+        "*.tsx": "typescriptreact",
+        "*.jsx": "javascriptreact"
+    },
+    // File watcher settings for hospital dashboard
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/node_modules/**": true,
+        "**/dist/**": true,
+        "**/medical-data-samples/**": true
+    }
+}
